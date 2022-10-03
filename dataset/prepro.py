@@ -1,9 +1,18 @@
 import os
 import numpy as np
 import tensorflow as tf
+import random
 # from IPython import embed
 
-def write_tfrecords(np_files_path, output_dir, reshape = True):
+def randrange(max_range):
+    return 0 if max_range == 0 else random.randrange(max_range)
+
+
+def get_cords(self, cord, idx):
+    return cord[idx], cord[idx] + self.patch_size[idx]
+
+
+def write_tfrecords(np_files_path, output_dir, crop = True, reshape = True):
     """ Convert numpy array to rfrecord
 
     :param np_files_path: String representing path where np files are stored
@@ -14,8 +23,22 @@ def write_tfrecords(np_files_path, output_dir, reshape = True):
     files.sort()
 
     # split files into samples list and labels list
-    imgs = [os.path.join(np_files_path, file) for file in files if "_x" in file]
-    lbls = [os.path.join(np_files_path, file) for file in files if "_y" in file]
+    imgs = [os.path.join(np_files_path, file) for file in files if "_x" in file]  # list of file names (strings)
+    lbls = [os.path.join(np_files_path, file) for file in files if "_y" in file]  # list of file names (strings)
+
+    if crop:
+        for i in range(len(imgs)):
+            img = np.load(imgs[i])
+            lbl = np.load(lbls[i])
+            ranges = [s - p for s, p in zip(img.shape[1:], [128, 128, 128])]
+            cord = [randrange(x) for x in ranges]
+            low_x, high_x = get_cords(cord, 0)
+            low_y, high_y = get_cords(cord, 1)
+            low_z, high_z = get_cords(cord, 2)
+            new_img = img[:, low_x:high_x, low_y:high_y, low_z:high_z]
+            new_lbl = lbl[:, low_x:high_x, low_y:high_y, low_z:high_z]
+            np.save(imgs[i], new_img)
+            np.save(lbls[i], new_lbl)
 
     if reshape:
         # once such behavior is done, it is saved forever
@@ -26,7 +49,7 @@ def write_tfrecords(np_files_path, output_dir, reshape = True):
             new_img = np.moveaxis(cur_img, 0, 2) # 392,392,190
             new_lbl = np.squeeze(np.load(lbls[i]), 0)
             np.save(imgs[i], new_img)
-            # np.save(lbls[i], new_lbl)
+            np.save(lbls[i], new_lbl)
 
     num_patients = len(imgs)
     
