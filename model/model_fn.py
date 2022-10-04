@@ -70,7 +70,7 @@ def unet_3d(features, labels, mode, params):
         labels = labels[..., 1:]
         logits = logits[..., 1:]
 
-    print("labels shape (not include background):", labels.shape)
+    print("labels shape (not include background):", labels.shape)  # (2, 128, 128, 127)
     print("logits (y_pred) shape (not include background):", logits.shape)
 
     loss = make_loss(params, y_pred=logits, y_true=labels)
