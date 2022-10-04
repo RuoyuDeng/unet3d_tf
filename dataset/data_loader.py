@@ -143,7 +143,8 @@ class Dataset: # pylint: disable=R0902
             RandFlip(),
             Cast(types=(np.float32, np.uint8)),
             RandomBrightnessAugmentation(factor=0.3, prob=0.1),
-            GaussianNoise(mean=0.0, std=0.1, prob=0.1)
+            GaussianNoise(mean=0.0, std=0.1, prob=0.1),
+            OneHotLabels(n_classes=3)
         ]
 
         dataset = dataset.map(
