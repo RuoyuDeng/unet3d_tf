@@ -36,10 +36,14 @@ def unet_3d(features, labels, mode, params):
     except:
         normalization = 'instancenorm'
 
+    print("labels shape:", labels.shape)
+
     input_node = tf.identity(features, name='input_node')
 
     logits = Builder(n_classes=3, normalization=normalization, mode=mode)(input_node)
     logits = tf.identity(logits, name='output_node')
+
+    print("logits (y_pred) shape:", logits.shape)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         prediction = tf.argmax(input=logits, axis=-1, output_type=tf.dtypes.int32, name="predictions")
@@ -65,6 +69,9 @@ def unet_3d(features, labels, mode, params):
     if not params.include_background:
         labels = labels[..., 1:]
         logits = logits[..., 1:]
+
+    print("labels shape (not include background):", labels.shape)
+    print("logits (y_pred) shape (not include background):", logits.shape)
 
     loss = make_loss(params, y_pred=logits, y_true=labels)
     loss = tf.identity(loss, name="total_loss_ref")

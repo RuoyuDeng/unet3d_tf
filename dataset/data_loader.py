@@ -198,10 +198,10 @@ class Dataset: # pylint: disable=R0902
         # FIXME: Hardcoded CenterCrop() shapes in their dataset, need to be changed. Same for PadXYZ() shapes
         transforms = [
             # CenterCrop((240, 240, 155)),
-            CenterCrop((392, 392, 190)),
+            CenterCrop((128, 128, 128)),
             Cast(dtype=tf.float32),
             NormalizeImages(),
-            PadXYZ((392, 392, 195))
+            PadXYZ((128, 128, 128))
             # PadXYZ((224, 224, 160))
         ]
 
@@ -225,10 +225,10 @@ class Dataset: # pylint: disable=R0902
         # FIXME: Hardcoded CenterCrop() shapes in their dataset, need to be changed. Same for PadXYZ() shapes
         transforms = [
             # CenterCrop((224, 224, 155)),
-            CenterCrop((392, 392, 190)),
+            CenterCrop((128, 128, 128)),
             Cast(dtype=tf.float32),
             NormalizeImages(),
-            PadXYZ((392, 392, 195))
+            PadXYZ((128, 128, 128))
             # PadXYZ((224, 224, 160))
         ]
 
@@ -260,7 +260,7 @@ class Dataset: # pylint: disable=R0902
             Cast(dtype=tf.float32),
             NormalizeImages(),
             RandomBrightnessAugmentation() if self.params.augment else None,
-            OneHotLabels(n_classes=2),
+            OneHotLabels(n_classes=3),
             # OneHotLabels(n_classes=4),
         ]
 
@@ -275,7 +275,7 @@ class Dataset: # pylint: disable=R0902
         """Synthetic data function for testing"""
         # FIXME: Hardcoded input shapes (224,224,160,4), need to be changed
         # inputs = tf.random.truncated_normal((224, 224, 160, 4), dtype=tf.float32, mean=0.0, stddev=1.0, seed=self._seed, name='synth_inputs')
-        inputs = tf.random.truncated_normal((392, 392, 190, 1), dtype=tf.float32, mean=0.0, stddev=1.0, seed=self._seed,
+        inputs = tf.random.truncated_normal((128, 128, 128, 1), dtype=tf.float32, mean=0.0, stddev=1.0, seed=self._seed,
                                      name='synth_inputs')
 
         count = 2 * self.params.warmup_steps
