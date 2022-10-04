@@ -70,8 +70,8 @@ class Dataset: # pylint: disable=R0902
         self._batch_size = batch_size
         self._seed = seed
 
-        self._xshape = (392, 392, 190, 1)
-        self._yshape = (392, 392, 190)
+        self._xshape = (128, 128, 128, 1)
+        self._yshape = (128, 128, 128)
 
     def parse(self, serialized):
         """ Parse TFRecord
@@ -133,13 +133,13 @@ class Dataset: # pylint: disable=R0902
         dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.cache()
         
-        # dataset = dataset.shuffle(buffer_size=self._batch_size * 8, seed=self._seed)
+        dataset = dataset.shuffle(buffer_size=self._batch_size * 8, seed=self._seed)
         dataset = dataset.repeat()
 
         dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         transforms = [
-            RandomCrop3D(self._input_shape),
+            #RandomCrop3D(self._input_shape),
             RandFlip(),
             Cast(types=(np.float32, np.uint8)),
             RandomBrightnessAugmentation(factor=0.3, prob=0.1),
