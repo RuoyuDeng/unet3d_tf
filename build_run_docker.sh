@@ -9,7 +9,7 @@ npy_data_path="/raid/data/imseg/preproc-data"
 
 if [[ "$mode" == "train" ]]
 then
-    sudo docker run --runtime=nvidia -it --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 --rm --ipc=host \
+    sudo docker run --runtime=nvidia -it  --rm --ipc=host \
     -v ${tf_data_path}:/data -v ${result_path}:/results -v ${npy_data_path}:/preproc-data \
     unet3d_tf:test /bin/bash scripts/unet3d_train_single.sh 1 /data /results 1
 elif [[ "$mode" == "container" ]]
