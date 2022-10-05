@@ -63,7 +63,7 @@ def write_tfrecords(np_files_path, output_dir, crop = True, reshape = True):
         print("Starting case", i + 1)
         # image_array = np.load(img)  # array type
         # print(image_array.shape)
-        image_array = np.load(img).astype(np.uint8)
+        image_array = np.load(img)
         label_array = np.load(lbls[i]).astype(np.uint8)  # array type
         mean = np.mean(image_array)
         std = np.std(image_array)
