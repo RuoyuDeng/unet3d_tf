@@ -10,8 +10,19 @@ def randrange(max_range):
 
 
 def get_cords(cord, idx):
-    patch_size = [128, 128, 128]
+    patch_size = [186, 186, 128]
     return cord[idx], cord[idx] + patch_size[idx]
+
+def min_shape(np_files_path):
+    files = os.listdir(np_files_path)
+    files.sort()
+
+    imgs = [os.path.join(np_files_path, file) for file in files if "_x" in file]  # list of file names (strings)
+
+
+    img_shapes = [np.load(img).shape for img in imgs]
+    shapes_np = np.array(img_shapes)
+    print(np.amin(shapes_np,axis=0))
 
 
 def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
@@ -42,7 +53,6 @@ def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
         print('Starting reshaping')
         for i in range(len(imgs)):
             print(f'Reshaping case {i}')
-            print(store_imgs[i])
             cur_img = np.load(imgs[i])
             cur_img = np.moveaxis(cur_img, 0, -1) # 1,190,392,392 -> 190,392,392,1
             new_img = np.moveaxis(cur_img, 0, 2) # 392,392,190
@@ -56,7 +66,7 @@ def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
             print(f'Cropping case {i}')
             img = np.load(store_imgs[i])
             lbl = np.load(store_lbls[i])
-            ranges = [s - p for s, p in zip(img.shape[:-1], [128, 128, 128])]
+            ranges = [s - p for s, p in zip(img.shape[:-1], [186, 186, 128])]
             cord = [randrange(x) for x in ranges]
             low_x, high_x = get_cords(cord, 0)
             low_y, high_y = get_cords(cord, 1)
@@ -140,9 +150,12 @@ if __name__ == "__main__":
     do_crop = args.do_crop
     do_reshape = args.do_reshape
 
+    # min_img_shape,min_lbl_shape = min_shape(raw_np_dir)
+    # max_img_shape,max_lbl_shape = max_shape(raw_np_dir)
+
+    # min_shape(raw_np_dir)
+    # print(f"The max image shape: {max_img_shape} ,max label shape: {max_lbl_shape} \n min image shape: {min_img_shape}, min label shape: {min_lbl_shape}")
     write_tfrecords(raw_np_dir,tf_dir, do_crop, do_reshape)
-    # write_tfrecords("/raid/data/imseg/preproc-data", "/raid/data/imseg/tfrecord-data", crop = False, reshape = False)
-    # write_tfrecords("/preproc-data", "/data")
 
     
 
