@@ -113,7 +113,7 @@ def write_tfrecords(np_files_path, output_dir, crop = True, reshape = True):
 
 
 if __name__ == "__main__":
-    write_tfrecords("/raid/data/imseg/preproc-data", "/raid/data/imseg/tfrecord-data", crop = False, reshape = False)
+    write_tfrecords("/raid/data/imseg/preproc-data", "/raid/data/imseg/tfrecord-data", crop = True, reshape = True)
     # write_tfrecords("/preproc-data", "/data")
 
     
