@@ -8,6 +8,5 @@ RUN pip install git+https://github.com/NVIDIA/dllogger@v1.0.0#egg=dllogger
 RUN pip install --disable-pip-version-check -r requirements.txt
 
 ENV TF_GPU_HOST_MEM_LIMIT_IN_MB=120000
-ENV TF_GPU_ALLOCATOR=cuda_malloc_async
 ENV XLA_FLAGS="--xla_multiheap_size_constraint_per_heap=2600000000"
 ENV OMPI_MCA_coll_hcoll_enable=0

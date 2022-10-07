@@ -16,4 +16,4 @@
 # Usage:
 # bash examples/unet3d_train_single.sh <number/of/gpus> <path/to/dataset> <path/to/results/directory> <batch/size>
 
-horovodrun -np $1 python main.py --data_dir $2 --model_dir $3 --exec_mode train_and_evaluate --augment --max_steps 5000 --batch_size $4 --xla --fold 0
+horovodrun -np $1 python main.py --data_dir $2 --model_dir $3 --exec_mode train_and_evaluate --augment --max_steps 500 --batch_size $4 --xla --fold 0
