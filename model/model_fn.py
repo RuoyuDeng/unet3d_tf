@@ -37,6 +37,7 @@ def unet_3d(features, labels, mode, params):
         normalization = 'instancenorm'
 
     print("labels shape:", labels.shape)
+    print("labels type:", type(labels))
 
     input_node = tf.identity(features, name='input_node')
 

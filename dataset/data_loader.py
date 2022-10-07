@@ -60,7 +60,7 @@ class Dataset: # pylint: disable=R0902
 
         # take the first 20 tfrecords and repeat them indefinitely
         self._folders = np.array([os.path.join(data_dir, path) for path in os.listdir(data_dir)
-                                  if path.endswith(".tfrecord")])
+                                  if path.endswith(".tfrecord")])[:10]
         assert len(self._folders) > 0, "No matching data found at {}".format(data_dir)
         self._train, self._eval = cross_validation(self._folders, fold_idx=fold_idx, n_folds=n_folds)
         self._input_shape = input_shape
@@ -70,8 +70,8 @@ class Dataset: # pylint: disable=R0902
         self._batch_size = batch_size
         self._seed = seed
 
-        self._xshape = (128, 128, 128, 1)
-        self._yshape = (128, 128, 128)
+        self._xshape = (186, 186, 128, 1)
+        self._yshape = (186, 186, 128)
 
     def parse(self, serialized):
         """ Parse TFRecord
@@ -139,7 +139,7 @@ class Dataset: # pylint: disable=R0902
         dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         transforms = [
-            #RandomCrop3D(self._input_shape),
+            RandomCrop3D((self._input_shape)),
             RandFlip(),
             Cast(types=(np.float32, np.uint8)),
             RandomBrightnessAugmentation(factor=0.3, prob=0.1),

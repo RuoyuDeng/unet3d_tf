@@ -111,8 +111,8 @@ def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
         for file_item in file_list:
             # print(file_item[0].dtype)
             # change from tostring() to tobytes(), suggested by numpy
-            sample = file_item[0].flatten().tobytes()
-            label = file_item[1].flatten().tobytes()
+            sample = file_item[0].flatten().tostring()
+            label = file_item[1].flatten().tostring()
             mean = file_item[2].astype(np.float32).flatten()
             stdev = file_item[3].astype(np.float32).flatten()
 

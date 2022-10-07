@@ -14,7 +14,7 @@
 
 """ Transforms for 3D data augmentation """
 import tensorflow as tf
-
+import numpy as np
 
 def apply_transforms(samples, labels, mean, stdev, transforms):
     """ Apply a chain of transforms to a pair of samples and labels """
@@ -76,8 +76,10 @@ class CenterCrop: # pylint: disable=R0903
         :param stdev:  Std (unused)
         :return: Cropped samples and labels
         """
+        
         shape = samples.get_shape()
         delta = [(shape[i].value - self.shape[i]) // 2 for i in range(len(self.shape))]
+        
         samples = samples[
             delta[0]:delta[0] + self.shape[0],
             delta[1]:delta[1] + self.shape[1],
@@ -111,22 +113,48 @@ class RandomCrop3D: # pylint: disable=R0903
         :param stdev:  Std (unused)
         :return: Cropped samples and labels
         """
+        
         shape = samples.get_shape()
-        min_ = tf.constant(self.margins, dtype=tf.float32)
-        max_ = tf.constant([shape[0].value - self.shape[0] - self.margins[0],
-                            shape[1].value - self.shape[1] - self.margins[1],
-                            shape[2].value - self.shape[2] - self.margins[2]],
-                           dtype=tf.float32)
-        center = tf.random_uniform((len(self.shape),), minval=min_, maxval=max_)
+        print("RandomCrop3D initial shape:", shape)
+        print("Type of sample's shape:", type(shape))
+        print("shape[0].value:", shape[0].value)
+        # min_ = tf.constant(self.margins, dtype=tf.float32)
+        # max_ = tf.constant([shape[0].value - self.shape[0] - self.margins[0],
+        #                     shape[1].value - self.shape[1] - self.margins[1],
+        #                     shape[2].value - self.shape[2] - self.margins[2]],
+        #                    dtype=tf.float32)
+        index0 = np.random.randint(low=self.margins[0], high=(shape[0].value - self.shape[0] - self.margins[0]+1))
+        index1 = np.random.randint(low=self.margins[1], high=(shape[1].value - self.shape[1] - self.margins[1]+1))
+        index2 = np.random.randint(low=self.margins[2], high=(shape[2].value - self.shape[2] - self.margins[2]+1))
+        center = tf.constant([index0,index1,index2],dtype=tf.float32)
+        # center = np.random.randint()
+        # center = tf.random.uniform((len(self.shape),), minval=min_, maxval=max_, dtype=tf.float32)
+        # print("Content of the first element of center:", tf.get_static_value(center,partial=True))
+        # print("Type of center:", type(center))
+        # print("Shape of center:", center.shape)
         center = tf.cast(center, dtype=tf.int32)
+        print("value of center:", tf.get_static_value(center))
+        
+        # added by us
+        # max_ = tf.cast(max_,dtype=tf.int32)
         samples = samples[center[0]:center[0] + self.shape[0],
                           center[1]:center[1] + self.shape[1],
                           center[2]:center[2] + self.shape[2]]
+        # samples = samples[max_[0]:max_[0] + self.shape[0],
+        #                   max_[1]:max_[1] + self.shape[1],
+        #                   max_[2]:max_[2] + self.shape[2]]
         if labels is None:
             return samples
         labels = labels[center[0]:center[0] + self.shape[0],
                         center[1]:center[1] + self.shape[1],
                         center[2]:center[2] + self.shape[2]]
+
+        # labels = labels[max_[0]:max_[0] + self.shape[0],
+        #                   max_[1]:max_[1] + self.shape[1],
+        #                   max_[2]:max_[2] + self.shape[2]]
+        print("RandomCrop3D input shape [0]:", self.shape[0])
+        print("RandomCrop3D input shape [0] type:", type(self.shape[0]))
+        print("RandomCrop3D shape after crop:", samples.shape)
         return samples, labels
 
 
