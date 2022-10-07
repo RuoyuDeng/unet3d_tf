@@ -24,60 +24,16 @@ def min_shape(np_files_path):
     shapes_np = np.array(img_shapes)
     print(np.amin(shapes_np,axis=0))
 
-
-def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
-    """ Convert numpy array to rfrecord
-
-    :param np_files_path: String representing path where np files are stored
-    :param output_dir: String representing path where to write
-    """
-    # create directory to store reshaped np-files
-    prep_np_dir = os.path.join(np_files_path,f"{raw_np_dir}-prep")
-    if not os.path.exists(prep_np_dir):
-        os.makedirs(prep_np_dir)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
+def npy_to_tfrecords(prep_np_dir, output_dir):
     # list all files
-    files = os.listdir(np_files_path)
+    files = os.listdir(prep_np_dir)
     files.sort()
 
-    # split files into samples list and labels list
-    imgs = [os.path.join(np_files_path, file) for file in files if "_x" in file]  # list of file names (strings)
-    lbls = [os.path.join(np_files_path, file) for file in files if "_y" in file]  # list of file names (strings)
-    
+    print(files)
+
     store_imgs = [os.path.join(prep_np_dir, file) for file in files if "_x" in file]
     store_lbls = [os.path.join(prep_np_dir, file) for file in files if "_y" in file]
 
-    if reshape:
-        print('Starting reshaping')
-        for i in range(len(imgs)):
-            print(f'Reshaping case {i}')
-            cur_img = np.load(imgs[i])
-            cur_img = np.moveaxis(cur_img, 0, -1) # 1,190,392,392 -> 190,392,392,1
-            new_img = np.moveaxis(cur_img, 0, 2) # 392,392,190
-            new_lbl = np.squeeze(np.load(lbls[i]), 0)
-            np.save(store_imgs[i], new_img)
-            np.save(store_lbls[i], new_lbl)
-
-    if crop:
-        print('Starting croping')
-        for i in range(len(store_imgs)):
-            print(f'Cropping case {i}')
-            img = np.load(store_imgs[i])
-            lbl = np.load(store_lbls[i])
-            ranges = [s - p for s, p in zip(img.shape[:-1], [186, 186, 128])]
-            cord = [randrange(x) for x in ranges]
-            low_x, high_x = get_cords(cord, 0)
-            low_y, high_y = get_cords(cord, 1)
-            low_z, high_z = get_cords(cord, 2)
-            new_img = img[low_x:high_x, low_y:high_y, low_z:high_z, :]
-            new_lbl = lbl[low_x:high_x, low_y:high_y, low_z:high_z]
-            np.save(store_imgs[i], new_img)
-            np.save(store_lbls[i], new_lbl)
-
-    num_patients = len(imgs)
-    
     img_list = []
     lbl_list = []
     mean_list = []
@@ -88,8 +44,9 @@ def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
         # image_array = np.load(img)  # array type
         
         image_array = np.load(img)
-        # print(image_array.shape)
+        
         label_array = np.load(store_lbls[i]).astype(np.uint8)  # array type
+        print(image_array.shape,label_array.shape)
         mean = np.mean(image_array)
         std = np.std(image_array)
         
@@ -137,6 +94,61 @@ def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
 
         print("Case", i + 1, "done")
 
+def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
+    """ Convert numpy array to rfrecord
+
+    :param np_files_path: String representing path where np files are stored
+    :param output_dir: String representing path where to write
+    """
+    # create directory to store reshaped np-files
+    prep_np_dir = os.path.join(np_files_path,f"{raw_np_dir}-prep")
+    if not os.path.exists(prep_np_dir):
+        os.makedirs(prep_np_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # list all files
+    files = os.listdir(np_files_path)
+    files.sort()
+
+    # split files into samples list and labels list
+    imgs = [os.path.join(np_files_path, file) for file in files if "_x" in file]  # list of file names (strings)
+    lbls = [os.path.join(np_files_path, file) for file in files if "_y" in file]  # list of file names (strings)
+    
+    store_imgs = [os.path.join(prep_np_dir, file) for file in files if "_x" in file]
+    store_lbls = [os.path.join(prep_np_dir, file) for file in files if "_y" in file]
+
+    if reshape:
+        print('Starting reshaping')
+        for i in range(len(imgs)):
+            print(f'Reshaping case {i}')
+            cur_img = np.load(imgs[i])
+            cur_img = np.moveaxis(cur_img, 0, -1) # 1,190,392,392 -> 190,392,392,1
+            new_img = np.moveaxis(cur_img, 0, 2) # 392,392,190
+            new_lbl = np.squeeze(np.load(lbls[i]), 0) # 1,190,392,392 -> 190,392,392
+            new_lbl = np.moveaxis(new_lbl, 0, 2) # 190,392,392 -> 392,392,190
+            np.save(store_imgs[i], new_img)
+            np.save(store_lbls[i], new_lbl)
+
+    if crop:
+        print('Starting croping')
+        for i in range(len(store_imgs)):
+            print(f'Cropping case {i}')
+            img = np.load(store_imgs[i])
+            lbl = np.load(store_lbls[i])
+            ranges = [s - p for s, p in zip(img.shape[:-1], [186, 186, 128])]
+            cord = [randrange(x) for x in ranges]
+            low_x, high_x = get_cords(cord, 0)
+            low_y, high_y = get_cords(cord, 1)
+            low_z, high_z = get_cords(cord, 2)
+            new_img = img[low_x:high_x, low_y:high_y, low_z:high_z, :]
+            new_lbl = lbl[low_x:high_x, low_y:high_y, low_z:high_z]
+            np.save(store_imgs[i], new_img)
+            np.save(store_lbls[i], new_lbl)
+
+    npy_to_tfrecords(prep_np_dir,output_dir)
+    
+
 
 if __name__ == "__main__":
     params = argparse.ArgumentParser(description="Prepare tf-data for unet3d_tf version")
@@ -157,6 +169,7 @@ if __name__ == "__main__":
     # min_shape(raw_np_dir)
     # print(f"The max image shape: {max_img_shape} ,max label shape: {max_lbl_shape} \n min image shape: {min_img_shape}, min label shape: {min_lbl_shape}")
     write_tfrecords(raw_np_dir,tf_dir, do_crop, do_reshape)
+    # npy_to_tfrecords("/npy-prep","/data")
 
     
 
