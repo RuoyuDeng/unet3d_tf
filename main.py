@@ -71,10 +71,11 @@ def main():
 
     estimator = build_estimator(params=params, model_fn=unet_3d)
     hooks = get_hooks(params, logger)
-
     if 'train' in params.exec_mode:
         # hvd.size(): number of horovod processes, divide work to all processes
+        print("hvd size is: ", hvd.size())
         max_steps = params.max_steps // (1 if params.benchmark else hvd.size())
+        print(f"max number of steps is {max_steps}")
         estimator.train(
             input_fn=dataset.train_fn,
             steps=max_steps,

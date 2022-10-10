@@ -30,9 +30,9 @@ def parse(serialized):
                                                 features=features)
 
     sample = tf.io.decode_raw(parsed_example['X'], tf.uint8)
-    sample = tf.cast(tf.reshape(sample, (190, 392, 392, 1)), tf.uint8)
+    sample = tf.cast(tf.reshape(sample, (186, 186, 128, 1)), tf.uint8)
     label = tf.io.decode_raw(parsed_example['Y'], tf.uint8)
-    label = tf.cast(tf.reshape(label, (190, 392, 392)), tf.uint8)
+    label = tf.cast(tf.reshape(label, (186, 186, 128)), tf.uint8)
 
     mean = parsed_example['mean']
     stdev = parsed_example['stdev']
@@ -54,6 +54,9 @@ if __name__ == "__main__":
 
   data_iterator = tf.contrib.eager.Iterator(new_dataset)
   tensor = next(data_iterator)  
+  for t in tensor:
+    print(type(t))
+    print(tf.get_static_value(t,partial=True))
   # see_tensor = tensor[0,:5,:5,0]
   
   # print(see_tensor.shape)
@@ -67,8 +70,9 @@ if __name__ == "__main__":
   # print(tensor)
   # print(tf.get_static_value(tensor,partial=True))
 
-  for t in tensor:
-    print(tf.get_static_value(t,partial=True))
+  
+
+  
 
 
   # sess = tf.Session()

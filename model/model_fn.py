@@ -37,7 +37,7 @@ def unet_3d(features, labels, mode, params):
         normalization = 'instancenorm'
 
     print("labels shape:", labels.shape)
-    print("labels type:", type(labels))
+    # print("labels type:", type(labels))
 
     input_node = tf.identity(features, name='input_node')
 
@@ -64,6 +64,7 @@ def unet_3d(features, labels, mode, params):
         total_eval_acc = total_dice(prediction, labels)
         metrics = {CLASSES[i]: tf.compat.v1.metrics.mean(eval_acc[i]) for i in range(eval_acc.shape[-1])}
         metrics['whole_tumor'] = tf.compat.v1.metrics.mean(total_eval_acc)
+        # metrics['Tumor'] = tf.compat.v1.metrics.mean(total_eval_acc)
         return tf.estimator.EstimatorSpec(mode=mode, loss=tf.reduce_mean(eval_acc),
                                           eval_metric_ops=metrics)
 
@@ -74,8 +75,11 @@ def unet_3d(features, labels, mode, params):
     print("labels shape (not include background):", labels.shape)  # (2, 128, 128, 127)
     print("logits (y_pred) shape (not include background):", logits.shape)
 
+
+    print("Before computing loss")
     loss = make_loss(params, y_pred=logits, y_true=labels)
     loss = tf.identity(loss, name="total_loss_ref")
+    print("After computing loss")
 
     global_step = tf.compat.v1.train.get_or_create_global_step()
     boundaries = [params.max_steps // (2 * hvd.size()),
@@ -87,14 +91,18 @@ def unet_3d(features, labels, mode, params):
     learning_rate = tf.compat.v1.train.piecewise_constant(global_step, boundaries, values)
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
 
+    
     if params.use_amp:
         loss_scale = tf.train.experimental.DynamicLossScale()
         optimizer = tf.compat.v1.train.experimental.MixedPrecisionLossScaleOptimizer(optimizer, loss_scale)
 
+    print("Before getting optmizer")
     optimizer = hvd.DistributedOptimizer(optimizer)
+    print("After getting optmizer")
 
+    print("Before min optimizer")
     with tf.control_dependencies(tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)):
         train_op = optimizer.minimize(loss, global_step=global_step)
-
+    print("After min optimizer")
     return tf.estimator.EstimatorSpec(
         mode=mode, loss=loss, train_op=train_op)

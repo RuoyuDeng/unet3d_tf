@@ -41,7 +41,7 @@ PARSER.add_argument('--augment', dest='augment', action='store_true', default=Fa
 
 # Dataset flags
 PARSER.add_argument('--data_dir', required=True, type=str)
-PARSER.add_argument('--input_shape', nargs='+', type=int, default=[128, 128, 128])
+PARSER.add_argument('--input_shape', nargs='+', type=int, default=(128, 128, 128))
 PARSER.add_argument('--batch_size', default=1, type=int)
 PARSER.add_argument('--fold', default=0, type=int)
 PARSER.add_argument('--num_folds', default=5, type=int)
