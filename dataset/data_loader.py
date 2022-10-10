@@ -91,14 +91,19 @@ class Dataset: # pylint: disable=R0902
 
         sample = tf.io.decode_raw(parsed_example['X'], tf.uint8)
         sample = tf.cast(tf.reshape(sample, self._xshape), tf.uint8)
+        # print("Inside parse - sample shape is:", sample.shape)  --> (186, 186, 128, 1)
+        # print("inside parse - _xshape is:", self._xshape)  --> (186, 186, 128, 1)
         label = tf.io.decode_raw(parsed_example['Y'], tf.uint8)
         label = tf.cast(tf.reshape(label, self._yshape), tf.uint8)
+        # print("Inside parse - label shape is:", label.shape)  --> (186, 186, 128)
+        # print("inside parse - _yshape is:", self._yshape)  --> (186, 186, 128)
 
         mean = parsed_example['mean']
         stdev = parsed_example['stdev']
 
         return sample, label, mean, stdev
 
+    # parse_x is only used in test_fn and export_fn
     def parse_x(self, serialized):
         """ Parse only the sample in a TFRecord with sample and label
 

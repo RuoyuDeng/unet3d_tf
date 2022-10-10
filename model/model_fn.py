@@ -71,12 +71,13 @@ def unet_3d(features, labels, mode, params):
         labels = labels[..., 1:]
         logits = logits[..., 1:]
 
-    print("labels shape (not include background):", labels.shape)  # (2, 128, 128, 127)
+    print("labels shape (not include background):", labels.shape)
     print("logits (y_pred) shape (not include background):", logits.shape)
 
     loss = make_loss(params, y_pred=logits, y_true=labels)
     loss = tf.identity(loss, name="total_loss_ref")
 
+    # Returns and create (if necessary) the global step tensor
     global_step = tf.compat.v1.train.get_or_create_global_step()
     boundaries = [params.max_steps // (2 * hvd.size()),
                   params.max_steps // (2 * hvd.size()),
@@ -86,6 +87,7 @@ def unet_3d(features, labels, mode, params):
     values = [lr / 4, lr, lr / 5, lr / 20]
     learning_rate = tf.compat.v1.train.piecewise_constant(global_step, boundaries, values)
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+    # print("--- after optimizer ---")
 
     if params.use_amp:
         loss_scale = tf.train.experimental.DynamicLossScale()

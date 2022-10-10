@@ -29,6 +29,10 @@ def make_loss(params, y_true, y_pred):
     if params.loss == 'ce':
         return _ce(y_true, y_pred)
     if params.loss == 'dice+ce':
+        # print("Inside make_loss - shape of y_true is:", y_true.shape) --> (2, 128, 128, 128, 2)
+        # print("Inside make_loss - shape of y_pred is:", y_pred.shape) --> (2, 128, 128, 128, 2)
+        # print("inside make_loss - _ce(y_true, y_pred) is:", tf.get_static_value(_ce(y_true, y_pred)))
+        # print("inside make_loss - _dice(y_true, y_pred) is:", tf.get_static_value(_dice(y_true, y_pred)))
         return tf.add(_ce(y_true, y_pred), _dice(y_true, y_pred), name="total_loss_ref")
 
     raise ValueError('Unknown loss: {}'.format(params.loss))
