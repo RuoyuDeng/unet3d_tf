@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import random
 import argparse
-# from IPython import embed
+from IPython import embed
 
 def randrange(max_range):
     return 0 if max_range == 0 else random.randrange(max_range)
@@ -43,8 +43,7 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
         print("Starting case", i + 1)
         # image_array = np.load(img)  # array type
         
-        image_array = np.load(img)
-        
+        image_array = np.load(img).astype(np.uint8)
         label_array = np.load(store_lbls[i]).astype(np.uint8)  # array type
         print(image_array.shape,label_array.shape)
         mean = np.mean(image_array)
@@ -55,7 +54,7 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
         lbl_list.append(label_array)
         mean_list.append(mean)
         std_list.append(std)
-        
+        # embed()
         # write to file
         output_filename = os.path.join(output_dir, "volume-{}.tfrecord".format(i))
         file_list = list(zip(np.array(img_list), 

@@ -60,7 +60,7 @@ class Dataset: # pylint: disable=R0902
 
         # take the first 20 tfrecords and repeat them indefinitely
         self._folders = np.array([os.path.join(data_dir, path) for path in os.listdir(data_dir)
-                                  if path.endswith(".tfrecord")])[:10]
+                                  if path.endswith(".tfrecord")])
         assert len(self._folders) > 0, "No matching data found at {}".format(data_dir)
         self._train, self._eval = cross_validation(self._folders, fold_idx=fold_idx, n_folds=n_folds)
         self._input_shape = input_shape
@@ -136,7 +136,10 @@ class Dataset: # pylint: disable=R0902
         dataset = dataset.shuffle(buffer_size=self._batch_size * 8, seed=self._seed)
         dataset = dataset.repeat()
 
+        print("Before map parse")
+        print("Value of autotune:", tf.data.experimental.AUTOTUNE) # its a number: -1, change it for future
         dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        print("After map parse")
 
         transforms = [
             RandomCrop3D((self._input_shape)),
@@ -146,11 +149,11 @@ class Dataset: # pylint: disable=R0902
             GaussianNoise(mean=0.0, std=0.1, prob=0.1),
             OneHotLabels(n_classes=3)
         ]
-
+        print('Before map transforms')
         dataset = dataset.map(
             map_func=lambda x, y, mean, stdev: apply_transforms(x, y, mean, stdev, transforms=transforms),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
+        print('After map transforms')
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=True)
 
@@ -249,10 +252,10 @@ class Dataset: # pylint: disable=R0902
         """ Synthetic data function for training """
         inputs = tf.random.uniform(self._xshape, dtype=tf.int32, minval=0, maxval=255, seed=self._seed,
                                    name='synth_inputs')
-        masks = tf.random.uniform(self._yshape, dtype=tf.int32, minval=0, maxval=4, seed=self._seed,
+        masks = tf.random.uniform(self._yshape, dtype=tf.int32, minval=0, maxval=3, seed=self._seed,
                                   name='synth_masks')
-        mean = tf.random.uniform((4,), dtype=tf.float32, minval=0, maxval=255, seed=self._seed)
-        stddev = tf.random.uniform((4,), dtype=tf.float32, minval=0, maxval=1, seed=self._seed)
+        mean = tf.random.uniform((3,), dtype=tf.float32, minval=0, maxval=255, seed=self._seed)
+        stddev = tf.random.uniform((3,), dtype=tf.float32, minval=0, maxval=1, seed=self._seed)
 
         dataset = tf.data.Dataset.from_tensors((inputs, masks))
         dataset = dataset.repeat()

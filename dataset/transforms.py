@@ -115,9 +115,9 @@ class RandomCrop3D: # pylint: disable=R0903
         """
         
         shape = samples.get_shape()
-        print("RandomCrop3D initial shape:", shape)
-        print("Type of sample's shape:", type(shape))
-        print("shape[0].value:", shape[0].value)
+        # print("RandomCrop3D initial shape:", shape)
+        # print("Type of sample's shape:", type(shape))
+        # print("shape[0].value:", shape[0].value)
         # min_ = tf.constant(self.margins, dtype=tf.float32)
         # max_ = tf.constant([shape[0].value - self.shape[0] - self.margins[0],
         #                     shape[1].value - self.shape[1] - self.margins[1],
@@ -133,7 +133,7 @@ class RandomCrop3D: # pylint: disable=R0903
         # print("Type of center:", type(center))
         # print("Shape of center:", center.shape)
         center = tf.cast(center, dtype=tf.int32)
-        print("value of center:", tf.get_static_value(center))
+        # print("value of center:", tf.get_static_value(center))
         
         # added by us
         # max_ = tf.cast(max_,dtype=tf.int32)
@@ -152,9 +152,9 @@ class RandomCrop3D: # pylint: disable=R0903
         # labels = labels[max_[0]:max_[0] + self.shape[0],
         #                   max_[1]:max_[1] + self.shape[1],
         #                   max_[2]:max_[2] + self.shape[2]]
-        print("RandomCrop3D input shape [0]:", self.shape[0])
-        print("RandomCrop3D input shape [0] type:", type(self.shape[0]))
-        print("RandomCrop3D shape after crop:", samples.shape)
+        # print("RandomCrop3D input shape [0]:", self.shape[0])
+        # print("RandomCrop3D input shape [0] type:", type(self.shape[0]))
+        # print("RandomCrop3D shape after crop:", samples.shape)
         return samples, labels
 
 
