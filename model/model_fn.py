@@ -39,6 +39,7 @@ def unet_3d(features, labels, mode, params):
     print("labels shape:", labels.shape)
     # print("labels type:", type(labels))
 
+    # before getting into builder, we have the shape problem
     input_node = tf.identity(features, name='input_node')
 
     logits = Builder(n_classes=3, normalization=normalization, mode=mode)(input_node)
