@@ -177,20 +177,23 @@ class Dataset: # pylint: disable=R0902
         assert len(self._eval) > 0, "Evaluation data not found. Did you specify --fold flag?"
 
         dataset = dataset.cache()
+        print("Element shapes before parse:", dataset.output_shapes)
         dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-            
-        
+        print("Element shapes after parse:", dataset.output_shapes)    
+        # PadXYZ(): does not seem to solve the evaluate problem
+        # make sure the x,y shape is the largest multiple of 32 that is smaller than self._xshape
         transforms = [    
-            CenterCrop((186,186,128)),
+            CenterCrop((160,160,128)),
             Cast(types=(np.float32, np.uint8)),
             NormalizeImages(),
             OneHotLabels(n_classes=3),
-            PadXYZ()
         ]
 
+        print("Element shapes before transform:", dataset.output_shapes)
         dataset = dataset.map(
             map_func=lambda x, y, mean, stdev: apply_transforms(x, y, mean, stdev, transforms=transforms),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        print("Element shapes after transform:", dataset.output_shapes)
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=False)
         dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
