@@ -178,10 +178,14 @@ class Dataset: # pylint: disable=R0902
 
         dataset = dataset.cache()
         dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-        transforms = [
+            
+        
+        transforms = [    
+            CenterCrop((186,186,128)),
             Cast(types=(np.float32, np.uint8)),
-            OneHotLabels(n_classes=3)
+            NormalizeImages(),
+            OneHotLabels(n_classes=3),
+            PadXYZ()
         ]
 
         dataset = dataset.map(
