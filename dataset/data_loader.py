@@ -134,6 +134,8 @@ class Dataset: # pylint: disable=R0902
         assert len(self._train) > 0, "Training data not found."
 
         print("First training file:", self._train[0])
+        # read numpy directly ->
+        # cross validation -> 
         dataset = tf.data.TFRecordDataset(filenames=self._train)
         dataset = dataset.shard(hvd.size(), hvd.rank())
         dataset = dataset.cache()

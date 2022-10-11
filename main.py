@@ -81,6 +81,7 @@ def main():
             steps=max_steps,
             hooks=hooks)
     if 'evaluate' in params.exec_mode:
+        # eval_size is the number of evaluation files
         result = estimator.evaluate(input_fn=dataset.eval_fn, steps=dataset.eval_size)
         _ = parse_evaluation_results(result, logger)
     if params.exec_mode == 'predict':
