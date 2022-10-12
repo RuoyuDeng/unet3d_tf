@@ -43,7 +43,7 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
         print("Starting case", i + 1)
         # image_array = np.load(img)  # array type
         
-        image_array = np.load(img).astype(np.uint8)
+        image_array = np.load(img).astype(np.float32)
         label_array = np.load(store_lbls[i]).astype(np.uint8)  # array type
         print(image_array.shape,label_array.shape)
         mean = np.mean(image_array)

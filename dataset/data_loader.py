@@ -89,8 +89,8 @@ class Dataset: # pylint: disable=R0902
         parsed_example = tf.io.parse_single_example(serialized=serialized,
                                                     features=features)
 
-        sample = tf.io.decode_raw(parsed_example['X'], tf.uint8)
-        sample = tf.cast(tf.reshape(sample, self._xshape), tf.uint8)
+        sample = tf.io.decode_raw(parsed_example['X'], tf.float32)
+        sample = tf.cast(tf.reshape(sample, self._xshape), tf.float32)
         # print("Inside parse - sample shape is:", sample.shape)  --> (186, 186, 128, 1)
         # print("inside parse - _xshape is:", self._xshape)  --> (186, 186, 128, 1)
         label = tf.io.decode_raw(parsed_example['Y'], tf.uint8)
