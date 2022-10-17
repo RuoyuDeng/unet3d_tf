@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 tf_dir="/raid/data/imseg/29gb-tf"
 raw_npy_dir="/raid/data/imseg/29gb-npy"
 prep_npy_dir="${raw_npy_dir}-prep"
