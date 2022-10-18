@@ -123,6 +123,8 @@ class RandomCrop3D: # pylint: disable=R0903
         #                     shape[1].value - self.shape[1] - self.margins[1],
         #                     shape[2].value - self.shape[2] - self.margins[2]],
         #                    dtype=tf.float32)
+
+        print("sample shape: ", shape)
         index0 = np.random.randint(low=self.margins[0], high=(shape[0].value - self.shape[0] - self.margins[0]+1))
         index1 = np.random.randint(low=self.margins[1], high=(shape[1].value - self.shape[1] - self.margins[1]+1))
         index2 = np.random.randint(low=self.margins[2], high=(shape[2].value - self.shape[2] - self.margins[2]+1))

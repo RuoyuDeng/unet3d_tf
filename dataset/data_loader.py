@@ -25,6 +25,25 @@ from dataset.transforms import NormalizeImages, OneHotLabels, apply_transforms, 
 
 CLASSES = {0: "Kidney", 1: "Tumor"}
 
+def split_train_val(all_tf_data: list):
+    """ Split data into training and evaluation based on hardcoded cases
+    :param all_tf_data: Path where all tfrecords are stored
+    :return: Train and Evaluation data as numpy array
+    """
+    with open("/workspace/unet3d/dataset/evaluation_cases.txt", "r") as f:
+        val_cases_list = f.readlines()
+    val_cases_list = [case.rstrip("\n") for case in val_cases_list]
+    features_train, features_eval = [], []
+    for file_name in all_tf_data:
+        if file_name.split('-')[-1].split(".")[0] in val_cases_list:
+            features_eval.append(file_name)
+        else:
+            features_train.append(file_name)
+    
+    return np.array(features_train), np.array(features_eval)
+
+
+
 
 def cross_validation(arr: np.ndarray, fold_idx: int, n_folds: int):
     """ Split data into folds for training and evaluation
@@ -58,11 +77,15 @@ class Dataset: # pylint: disable=R0902
         :param params: Dictionary with additional configuration parameters
         """
 
-        # take the first 20 tfrecords and repeat them indefinitely
-        self._folders = np.array([os.path.join(data_dir, path) for path in os.listdir(data_dir)
-                                  if path.endswith(".tfrecord")])
-        assert len(self._folders) > 0, "No matching data found at {}".format(data_dir)
-        self._train, self._eval = cross_validation(self._folders, fold_idx=fold_idx, n_folds=n_folds)
+        self._folders = [os.path.join(data_dir, path) for path in os.listdir(data_dir) if path.endswith(".tfrecord")]
+
+        if params.cross_val:
+            self._folders = np.array(self._folders)
+            self._train, self._eval = cross_validation(self._folders, fold_idx=fold_idx, n_folds=n_folds)
+        else:
+            self._train, self._eval = split_train_val(self._folders)    
+        
+        assert len(self._train) + len(self._eval) > 0, "No matching data found at {}".format(data_dir)
         self._input_shape = input_shape
         self._data_dir = data_dir
         self.params = params
@@ -70,8 +93,9 @@ class Dataset: # pylint: disable=R0902
         self._batch_size = batch_size
         self._seed = seed
 
-        self._xshape = (186, 186, 128, 1)
-        self._yshape = (186, 186, 128)
+        # self._xshape = (186, 186, 128, 1)
+        # self._yshape = (186, 186, 128)
+        # self._shape_shape = (3,)
 
     def parse(self, serialized):
         """ Parse TFRecord
@@ -83,20 +107,25 @@ class Dataset: # pylint: disable=R0902
             'X': tf.io.FixedLenFeature([], tf.string),
             'Y': tf.io.FixedLenFeature([], tf.string),
             'mean': tf.io.FixedLenFeature([], tf.float32),
-            'stdev': tf.io.FixedLenFeature([], tf.float32)
+            'stdev': tf.io.FixedLenFeature([], tf.float32),
+            'shape_x': tf.io.FixedLenFeature([], tf.int64),
+            'shape_y': tf.io.FixedLenFeature([], tf.int64),
+            'shape_z': tf.io.FixedLenFeature([], tf.int64)
         }
 
-        parsed_example = tf.io.parse_single_example(serialized=serialized,
-                                                    features=features)
-
+        parsed_example = tf.io.parse_single_example(serialized=serialized,features=features)        
+        x = tf.cast(parsed_example['shape_x'],tf.int32)
+        y = tf.cast(parsed_example['shape_y'],tf.int32)
+        z = tf.cast(parsed_example['shape_z'],tf.int32)    
+        x_shape = [x, y, z, 1]
+        y_shape = [x, y, z]
+        # maybe could not work.... x_shape and y_shape are required immediately, but the tensor parsed from
+        # features are not executed untill all operations are set in the graph....
+        
         sample = tf.io.decode_raw(parsed_example['X'], tf.float32)
-        sample = tf.cast(tf.reshape(sample, self._xshape), tf.float32)
-        # print("Inside parse - sample shape is:", sample.shape)  --> (186, 186, 128, 1)
-        # print("inside parse - _xshape is:", self._xshape)  --> (186, 186, 128, 1)
+        sample = tf.cast(tf.reshape(sample, x_shape), tf.float32)
         label = tf.io.decode_raw(parsed_example['Y'], tf.uint8)
-        label = tf.cast(tf.reshape(label, self._yshape), tf.uint8)
-        # print("Inside parse - label shape is:", label.shape)  --> (186, 186, 128)
-        # print("inside parse - _yshape is:", self._yshape)  --> (186, 186, 128)
+        label = tf.cast(tf.reshape(label, y_shape), tf.uint8)
 
         mean = parsed_example['mean']
         stdev = parsed_example['stdev']
@@ -133,7 +162,7 @@ class Dataset: # pylint: disable=R0902
 
         assert len(self._train) > 0, "Training data not found."
 
-        print("First training file:", self._train[0])
+        #print("First training file:", self._train[0])
         # read numpy directly ->
         # cross validation -> 
         dataset = tf.data.TFRecordDataset(filenames=self._train)
@@ -143,10 +172,10 @@ class Dataset: # pylint: disable=R0902
         dataset = dataset.shuffle(buffer_size=self._batch_size * 8, seed=self._seed)
         dataset = dataset.repeat()
 
-        print("Before map parse")
-        print("Value of autotune:", tf.data.experimental.AUTOTUNE) # its a number: -1, change it for future
-        dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        print("After map parse")
+        #print("Before map parse")
+        #print("Value of autotune:", hvd.size()) # its a number: -1, change it for future
+        dataset = dataset.map(self.parse, num_parallel_calls=hvd.size())
+        #print("After map parse")
 
         transforms = [
             RandomCrop3D((self._input_shape)),
@@ -156,15 +185,15 @@ class Dataset: # pylint: disable=R0902
             GaussianNoise(mean=0.0, std=0.1, prob=0.1),
             OneHotLabels(n_classes=3)
         ]
-        print('Before map transforms')
+        #print('Before map transforms')
         dataset = dataset.map(
             map_func=lambda x, y, mean, stdev: apply_transforms(x, y, mean, stdev, transforms=transforms),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        print('After map transforms')
+            num_parallel_calls=hvd.size())
+        #print('After map transforms')
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=True)
 
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         if self._batch_size == 1:
             options = dataset.options()
@@ -179,9 +208,9 @@ class Dataset: # pylint: disable=R0902
         assert len(self._eval) > 0, "Evaluation data not found. Did you specify --fold flag?"
 
         dataset = dataset.cache()
-        print("Element shapes before parse:", dataset.output_shapes)
-        dataset = dataset.map(self.parse, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        print("Element shapes after parse:", dataset.output_shapes)    
+        #print("Element shapes before parse:", dataset.output_shapes)
+        dataset = dataset.map(self.parse, num_parallel_calls=hvd.size())
+        #print("Element shapes after parse:", dataset.output_shapes)    
         # PadXYZ(): does not seem to solve the evaluate problem
         # make sure the x,y shape is the largest multiple of 32 that is smaller than self._xshape
         transforms = [    
@@ -191,14 +220,14 @@ class Dataset: # pylint: disable=R0902
             OneHotLabels(n_classes=3),
         ]
 
-        print("Element shapes before transform:", dataset.output_shapes)
+        #print("Element shapes before transform:", dataset.output_shapes)
         dataset = dataset.map(
             map_func=lambda x, y, mean, stdev: apply_transforms(x, y, mean, stdev, transforms=transforms),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        print("Element shapes after transform:", dataset.output_shapes)
+            num_parallel_calls=hvd.size())
+        #print("Element shapes after transform:", dataset.output_shapes)
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=False)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         return dataset
 
@@ -214,7 +243,7 @@ class Dataset: # pylint: disable=R0902
         assert len(self._eval) > 0, "Evaluation data not found. Did you specify --fold flag?"
 
         dataset = dataset.repeat(count)
-        dataset = dataset.map(self.parse_x, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.parse_x, num_parallel_calls=hvd.size())
 
         # FIXME: Hardcoded CenterCrop() shapes in their dataset, need to be changed. Same for PadXYZ() shapes
         transforms = [
@@ -228,10 +257,10 @@ class Dataset: # pylint: disable=R0902
 
         dataset = dataset.map(
             map_func=lambda x, mean, stdev: apply_test_transforms(x, mean, stdev, transforms=transforms),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            num_parallel_calls=hvd.size())
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=self.params.benchmark)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         return dataset
 
@@ -241,7 +270,7 @@ class Dataset: # pylint: disable=R0902
         assert len(self._eval) > 0, "Evaluation data not found. Did you specify --fold flag?"
 
         dataset = dataset.repeat(1)
-        dataset = dataset.map(self.parse_x, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(self.parse_x, num_parallel_calls=hvd.size())
 
         # FIXME: Hardcoded CenterCrop() shapes in their dataset, need to be changed. Same for PadXYZ() shapes
         transforms = [
@@ -255,10 +284,10 @@ class Dataset: # pylint: disable=R0902
 
         dataset = dataset.map(
             map_func=lambda x, mean, stdev: apply_test_transforms(x, mean, stdev, transforms=transforms),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            num_parallel_calls=hvd.size())
         dataset = dataset.batch(batch_size=self._batch_size,
                                 drop_remainder=True)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         return dataset
 
@@ -286,9 +315,9 @@ class Dataset: # pylint: disable=R0902
         ]
 
         dataset = dataset.map(map_func=lambda x, y: apply_transforms(x, y, mean, stddev, transforms),
-                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                              num_parallel_calls=hvd.size())
         dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         return dataset
 
@@ -304,7 +333,7 @@ class Dataset: # pylint: disable=R0902
         dataset = tf.data.Dataset.from_tensors(inputs)
         dataset = dataset.repeat(count)
         dataset = dataset.batch(self._batch_size)
-        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=hvd.size())
 
         return dataset
 

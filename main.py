@@ -73,13 +73,18 @@ def main():
     hooks = get_hooks(params, logger)
     if 'train' in params.exec_mode:
         # hvd.size(): number of horovod processes, divide work to all processes
-        print("hvd size is: ", hvd.size())
-        max_steps = params.max_steps // (1 if params.benchmark else hvd.size())
-        print(f"max number of steps is {max_steps}")
+        # print("hvd size is: ", hvd.size())
+        # max_steps = params.max_steps // (1 if params.benchmark else hvd.size())
+        max_steps = params.max_steps
+        # print(f"max number of steps is {max_steps}")
         estimator.train(
             input_fn=dataset.train_fn,
             steps=max_steps,
             hooks=hooks)
+        # estimator.train(
+        #     input_fn=dataset.train_fn,
+        #     max_steps=max_steps,
+        #     hooks=hooks)
     if 'evaluate' in params.exec_mode:
         # eval_size is the number of evaluation files
         result = estimator.evaluate(input_fn=dataset.eval_fn, steps=dataset.eval_size)

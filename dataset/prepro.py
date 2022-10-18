@@ -22,7 +22,7 @@ def min_shape(np_files_path):
 
     img_shapes = [np.load(img).shape for img in imgs]
     shapes_np = np.array(img_shapes)
-    print(np.amin(shapes_np,axis=0))
+    print(np.amin(shapes_np,axis=0),np.mean(shapes_np,axis=0))
 
 def npy_to_tfrecords(prep_np_dir, output_dir):
     # list all files
@@ -38,6 +38,7 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
     lbl_list = []
     mean_list = []
     std_list = []
+    shape_list = []
 
     for i, img in enumerate(store_imgs):
         print("Starting case", i + 1)
@@ -45,22 +46,25 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
         
         image_array = np.load(img).astype(np.float32)
         label_array = np.load(store_lbls[i]).astype(np.uint8)  # array type
-        print(image_array.shape,label_array.shape)
+        # print(image_array.shape,label_array.shape)
         mean = np.mean(image_array)
         std = np.std(image_array)
+        shape = label_array.shape
         
         
         img_list.append(image_array)
         lbl_list.append(label_array)
         mean_list.append(mean)
         std_list.append(std)
+        shape_list.append(shape)
         # embed()
         # write to file
         output_filename = os.path.join(output_dir, "volume-{}.tfrecord".format(i))
         file_list = list(zip(np.array(img_list), 
                             np.array(lbl_list),
                             np.array(mean_list),
-                            np.array(std_list)))
+                            np.array(std_list),
+                            np.array(shape_list)))
 
         # call np_to_tfrecords
         writer = tf.io.TFRecordWriter(output_filename)
@@ -72,12 +76,20 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
             label = file_item[1].flatten().tostring()
             mean = file_item[2].astype(np.float32).flatten()
             stdev = file_item[3].astype(np.float32).flatten()
+            # convert shape int to int64
+            shape = file_item[4].astype(np.int64).flatten()
+            shape_x = shape[0]
+            shape_y = shape[1]
+            shape_z = shape[2]
 
             d_feature = {}
             d_feature['X'] = tf.train.Feature(bytes_list=tf.train.BytesList(value=[sample]))
             d_feature['Y'] = tf.train.Feature(bytes_list=tf.train.BytesList(value=[label]))
             d_feature['mean'] = tf.train.Feature(float_list=tf.train.FloatList(value=mean))
             d_feature['stdev'] = tf.train.Feature(float_list=tf.train.FloatList(value=stdev))
+            d_feature['shape_x'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[shape_x]))
+            d_feature['shape_y'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[shape_y]))
+            d_feature['shape_z'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[shape_z]))
 
             features = tf.train.Features(feature = d_feature)
             example = tf.train.Example(features = features)
@@ -90,10 +102,11 @@ def npy_to_tfrecords(prep_np_dir, output_dir):
         lbl_list = []
         mean_list = []
         std_list = []
+        shape_list = []
 
         print("Case", i + 1, "done")
 
-def write_tfrecords(np_files_path, output_dir, crop = False, reshape = False):
+def write_tfrecords(np_files_path, output_dir, crop, reshape):
     """ Convert numpy array to rfrecord
 
     :param np_files_path: String representing path where np files are stored

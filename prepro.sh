@@ -8,7 +8,7 @@ prep_npy_dir="${raw_npy_dir}-prep"
 # if npy-prep directory exists, we skip crop and shapping, generate tf-files immediately
 if [ ! -d "${prep_npy_dir}" ]
 then
-    sudo python3 dataset/prepro.py --np-raw ${raw_npy_dir} --tf-data ${tf_dir} --do-reshape -do-crop
+    sudo python3 dataset/prepro.py --np-raw ${raw_npy_dir} --tf-data ${tf_dir} --do-reshape
 else
     # echo $raw_npy_dir
     sudo python3 dataset/prepro.py --np-raw ${raw_npy_dir} --tf-data ${tf_dir}
