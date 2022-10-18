@@ -36,8 +36,8 @@ def unet_3d(features, labels, mode, params):
     except:
         normalization = 'instancenorm'
 
-    print("labels shape:", labels.shape)
-    # print("labels type:", type(labels))
+    #print("labels shape:", labels.shape)
+    # #print("labels type:", type(labels))
 
     # before getting into builder, we have the shape problem
     input_node = tf.identity(features, name='input_node')
@@ -45,7 +45,7 @@ def unet_3d(features, labels, mode, params):
     logits = Builder(n_classes=3, normalization=normalization, mode=mode)(input_node)
     logits = tf.identity(logits, name='output_node')
 
-    print("logits (y_pred) shape:", logits.shape)
+    #print("logits (y_pred) shape:", logits.shape)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         prediction = tf.argmax(input=logits, axis=-1, output_type=tf.dtypes.int32, name="predictions")
@@ -73,14 +73,14 @@ def unet_3d(features, labels, mode, params):
         labels = labels[..., 1:]
         logits = logits[..., 1:]
 
-    print("labels shape (not include background):", labels.shape)
-    print("logits (y_pred) shape (not include background):", logits.shape)
+    #print("labels shape (not include background):", labels.shape)
+    #print("logits (y_pred) shape (not include background):", logits.shape)
 
 
-    print("Before computing loss")
+    #print("Before computing loss")
     loss = make_loss(params, y_pred=logits, y_true=labels)
     loss = tf.identity(loss, name="total_loss_ref")
-    print("After computing loss")
+    #print("After computing loss")
 
     # Returns and create (if necessary) the global step tensor
     global_step = tf.compat.v1.train.get_or_create_global_step()
@@ -92,20 +92,20 @@ def unet_3d(features, labels, mode, params):
     values = [lr / 4, lr, lr / 5, lr / 20]
     learning_rate = tf.compat.v1.train.piecewise_constant(global_step, boundaries, values)
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
-    # print("--- after optimizer ---")
+    # #print("--- after optimizer ---")
 
     
     if params.use_amp:
         loss_scale = tf.train.experimental.DynamicLossScale()
         optimizer = tf.compat.v1.train.experimental.MixedPrecisionLossScaleOptimizer(optimizer, loss_scale)
 
-    print("Before getting optmizer")
+    #print("Before getting optmizer")
     optimizer = hvd.DistributedOptimizer(optimizer)
-    print("After getting optmizer")
+    #print("After getting optmizer")
 
-    print("Before min optimizer")
+    #print("Before min optimizer")
     with tf.control_dependencies(tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.UPDATE_OPS)):
         train_op = optimizer.minimize(loss, global_step=global_step)
-    print("After min optimizer")
+    #print("After min optimizer")
     return tf.estimator.EstimatorSpec(
         mode=mode, loss=loss, train_op=train_op)

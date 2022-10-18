@@ -35,64 +35,64 @@ class Builder: # pylint: disable=R0903
         :param features: Input features
         :return: Output of the graph
         """
-        print("before skip 128:",features.shape)
+        #print("before skip 128:",features.shape)
         skip_128 = input_block(inputs=features,
                                out_channels=32,
                                normalization=self._normalization,
                                mode=self._mode)
-        print("after skip 128, before skip 64:", skip_128.shape)
+        #print("after skip 128, before skip 64:", skip_128.shape)
 
         skip_64 = downsample_block(inputs=skip_128,
                                    out_channels=64,
                                    normalization=self._normalization,
                                    mode=self._mode)
-        print("after skip 64, before skip 32:", skip_64.shape)
+        #print("after skip 64, before skip 32:", skip_64.shape)
 
         skip_32 = downsample_block(inputs=skip_64,
                                    out_channels=128,
                                    normalization=self._normalization,
                                    mode=self._mode)
-        print("after skip 32, before skip 16", skip_32.shape)
+        #print("after skip 32, before skip 16", skip_32.shape)
         skip_16 = downsample_block(inputs=skip_32,
                                    out_channels=256,
                                    normalization=self._normalization,
                                    mode=self._mode)
-        print("after skip 16, before skip 8", skip_16.shape)
+        #print("after skip 16, before skip 8", skip_16.shape)
         skip_8 = downsample_block(inputs=skip_16,
                                   out_channels=320,
                                   normalization=self._normalization,
                                   mode=self._mode)
-        print("after skip 8, before out 1", skip_8.shape)
+        #print("after skip 8, before out 1", skip_8.shape)
         out = downsample_block(inputs=skip_8,
                                out_channels=320,
                                normalization=self._normalization,
                                mode=self._mode)
-        print("after out 1, before out 2", out.shape)
+        #print("after out 1, before out 2", out.shape)
         out = upsample_block(out, skip_8,
                              out_channels=320,
                              normalization=self._normalization,
                              mode=self._mode)
-        print("after out 2, before out 3", out.shape)
+        #print("after out 2, before out 3", out.shape)
         out = upsample_block(out, skip_16,
                              out_channels=256,
                              normalization=self._normalization,
                              mode=self._mode)
-        print("after out 3, before out 4", out.shape)
+        #print("after out 3, before out 4", out.shape)
         out = upsample_block(out, skip_32,
                              out_channels=128,
                              normalization=self._normalization,
                              mode=self._mode)
-        print("after out 4, before out 5", out.shape)
+        #print("after out 4, before out 5", out.shape)
         out = upsample_block(out, skip_64,
                              out_channels=64,
                              normalization=self._normalization,
                              mode=self._mode)
-        print("after out 5, before out 6", out.shape)
+        #print("after out 5, before out 6", out.shape)
         out = upsample_block(out, skip_128,
                              out_channels=32,
                              normalization=self._normalization,
                              mode=self._mode)
-        print("after out 6, before out 7", out.shape)
+        #print("after out 6, before out 7", out.shape)
         return output_layer(out,
                             out_channels=self._n_classes,
                             activation='softmax')
