@@ -5,11 +5,11 @@ mode=$1
 
 result_path="/raid/data/imseg/results"
 tf_data_path="/raid/data/imseg/29gb-tf"
-npy_data_path="/raid/data/imseg/29gb-npy"
+npy_data_path="/raid/data/imseg/29gb-npy-prep"
 if [[ "$mode" == "train" ]]
 then
     sudo docker run --runtime=nvidia -it  --rm --ipc=host \
-    -v ${tf_data_path}:/data -v ${result_path}:/results \
+    -v ${npy_data_path}:/data -v ${result_path}:/results \
     unet3d_tf:test /bin/bash scripts/unet3d_train_single.sh 1 /data /results 2
 
 elif [[ "$mode" == "test" ]]

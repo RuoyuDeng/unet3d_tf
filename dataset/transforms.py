@@ -13,14 +13,16 @@
 # limitations under the License.
 
 """ Transforms for 3D data augmentation """
+import random
 import tensorflow as tf
 import numpy as np
 
-def apply_transforms(samples, labels, mean, stdev, transforms):
+
+def apply_transforms(samples, labels, transforms):
     """ Apply a chain of transforms to a pair of samples and labels """
     for _t in transforms:
         if _t is not None:
-            samples, labels = _t(samples, labels, mean, stdev)
+            samples, labels = _t(samples, labels)
     return samples, labels
 
 
@@ -114,7 +116,7 @@ class RandomCrop3D: # pylint: disable=R0903
         :return: Cropped samples and labels
         """
         
-        shape = samples.get_shape()
+        shape = samples.shape()
         # print("RandomCrop3D initial shape:", shape)
         # print("Type of sample's shape:", type(shape))
         # print("shape[0].value:", shape[0].value)
@@ -158,6 +160,68 @@ class RandomCrop3D: # pylint: disable=R0903
         # print("RandomCrop3D input shape [0] type:", type(self.shape[0]))
         # print("RandomCrop3D shape after crop:", samples.shape)
         return samples, labels
+
+
+class RandBalancedCrop:
+    def __init__(self, patch_size):
+        self.patch_size = patch_size
+
+    def __call__(self, images, labels):
+        #print("images shape:", images.shape())
+        print("images type:", type(images))
+        #data_tuples = [self._rand_crop(image,label) for image,label in zip(images,labels)]
+        #images = np.array([data[0] for data in data_tuples])
+        #labels = np.array([data[1] for data in data_tuples])
+        return images, labels
+
+    @staticmethod
+    def randrange(max_range):
+        return 0 if max_range == 0 else random.randrange(max_range)
+
+    def get_cords(self, cord, idx):
+        return cord[idx], cord[idx] + self.patch_size[idx]
+
+    def _rand_crop(self, image, label):
+        ranges = [s - p for s, p in zip(image.shape[1:], self.patch_size)]
+        cord = [self.randrange(x) for x in ranges]
+        low_x, high_x = self.get_cords(cord, 0)
+        low_y, high_y = self.get_cords(cord, 1)
+        low_z, high_z = self.get_cords(cord, 2)
+        image = image[:, low_x:high_x, low_y:high_y, low_z:high_z]
+        label = label[:, low_x:high_x, low_y:high_y, low_z:high_z]
+        return image, label, [low_x, high_x, low_y, high_y, low_z, high_z]
+
+    def rand_foreg_cropd(self, image, label):
+        def adjust(foreg_slice, patch_size, label, idx):
+            diff = patch_size[idx - 1] - (foreg_slice[idx].stop - foreg_slice[idx].start)
+            sign = -1 if diff < 0 else 1
+            diff = abs(diff)
+            ladj = self.randrange(diff)
+            hadj = diff - ladj
+            low = max(0, foreg_slice[idx].start - sign * ladj)
+            high = min(label.shape[idx], foreg_slice[idx].stop + sign * hadj)
+            diff = patch_size[idx - 1] - (high - low)
+            if diff > 0 and low == 0:
+                high += diff
+            elif diff > 0:
+                low -= diff
+            return low, high
+
+        cl = np.random.choice(np.unique(label[label > 0]))
+        foreg_slices = scipy.ndimage.find_objects(scipy.ndimage.measurements.label(label==cl)[0])
+        foreg_slices = [x for x in foreg_slices if x is not None]
+        slice_volumes = [np.prod([s.stop - s.start for s in sl]) for sl in foreg_slices]
+        slice_idx = np.argsort(slice_volumes)[-2:]
+        foreg_slices = [foreg_slices[i] for i in slice_idx]
+        if not foreg_slices:
+            return self._rand_crop(image, label)
+        foreg_slice = foreg_slices[random.randrange(len(foreg_slices))]
+        low_x, high_x = adjust(foreg_slice, self.patch_size, label, 1)
+        low_y, high_y = adjust(foreg_slice, self.patch_size, label, 2)
+        low_z, high_z = adjust(foreg_slice, self.patch_size, label, 3)
+        image = image[:, low_x:high_x, low_y:high_y, low_z:high_z]
+        label = label[:, low_x:high_x, low_y:high_y, low_z:high_z]
+        return image, label, [low_x, high_x, low_y, high_y, low_z, high_z]
 
 
 class NormalizeImages: # pylint: disable=R0903
@@ -280,12 +344,23 @@ class GaussianNoise:
         return samples, labels
 
 
+class OneHot:
+    '''One hot (new ver)'''
+    def __init__(self, n_classes=1):
+        self._n_classes = n_classes
+    
+    def __call__(self, samples, labels):
+        def one_hot(a, num_classes):
+            return np.squeeze(np.eye(num_classes)[a.reshape(-1)])
+        return samples, one_hot(labels, self._n_classes)
+
+
 class OneHotLabels: # pylint: disable=R0903
     """ One hot encoding of labels """
     def __init__(self, n_classes=1):
         self._n_classes = n_classes
 
-    def __call__(self, samples, labels, mean, stdev):
+    def __call__(self, samples, labels):
         """ Run op
 
         :param samples: Sample arrays (unused)
@@ -294,4 +369,6 @@ class OneHotLabels: # pylint: disable=R0903
         :param stdev:  Std (unused)
         :return: One hot encoded labels
         """
+        print("Type of items in labels:", labels.dtype)
+        #print("Type of self._n_classes:", type(self._n_classes))
         return samples, tf.one_hot(labels, self._n_classes)

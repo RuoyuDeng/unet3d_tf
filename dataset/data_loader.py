@@ -19,7 +19,7 @@ import numpy as np
 import horovod.tensorflow as hvd
 import tensorflow as tf
 
-from dataset.transforms import NormalizeImages, OneHotLabels, apply_transforms, PadXYZ, RandomCrop3D, \
+from dataset.transforms import NormalizeImages, OneHot, OneHotLabels, RandBalancedCrop, apply_transforms, PadXYZ, RandomCrop3D, \
     RandFlip, RandomBrightnessAugmentation, CenterCrop, GaussianNoise, \
     apply_test_transforms, Cast
 
@@ -41,8 +41,6 @@ def split_train_val(all_tf_data: list):
             features_train.append(file_name)
     
     return np.array(features_train), np.array(features_eval)
-
-
 
 
 def cross_validation(arr: np.ndarray, fold_idx: int, n_folds: int):
@@ -77,7 +75,7 @@ class Dataset: # pylint: disable=R0902
         :param params: Dictionary with additional configuration parameters
         """
 
-        self._folders = [os.path.join(data_dir, path) for path in os.listdir(data_dir) if path.endswith(".tfrecord")]
+        self._folders = [os.path.join(data_dir, path) for path in os.listdir(data_dir) if path.endswith(".npy")]
 
         if params.cross_val:
             self._folders = np.array(self._folders)
@@ -86,6 +84,13 @@ class Dataset: # pylint: disable=R0902
             self._train, self._eval = split_train_val(self._folders)    
         
         assert len(self._train) + len(self._eval) > 0, "No matching data found at {}".format(data_dir)
+
+        # get images numpy list and labels numpy list
+        self._train_images = np.array([np.load(image) for image in self._train if "_x" in image])
+        self._train_labels = np.array([np.load(label) for label in self._train if "_y" in label])
+        self._eval_images = np.array([np.load(image) for image in self._eval if "_x" in image])
+        self._eval_labels = np.array([np.load(label) for label in self._eval if "_y" in label])
+
         self._input_shape = input_shape
         self._data_dir = data_dir
         self.params = params
@@ -155,29 +160,29 @@ class Dataset: # pylint: disable=R0902
         #print("First training file:", self._train[0])
         # read numpy directly ->
         # cross validation -> 
-        dataset = tf.data.TFRecordDataset(filenames=self._train)
+        dataset = tf.data.Dataset.from_tensor_slices((self._train_images, self._train_labels))
         dataset = dataset.shard(hvd.size(), hvd.rank())
-        dataset = dataset.cache()
+        #dataset = dataset.cache()
         
         dataset = dataset.shuffle(buffer_size=self._batch_size * 8, seed=self._seed)
         dataset = dataset.repeat()
 
         #print("Before map parse")
         #print("Value of autotune:", hvd.size()) # its a number: -1, change it for future
-        dataset = dataset.map(self.parse, num_parallel_calls=hvd.size())
+        #dataset = dataset.map(self.parse, num_parallel_calls=hvd.size())
         #print("After map parse")
 
         transforms = [
-            RandomCrop3D((self._input_shape)),
-            RandFlip(),
-            Cast(types=(np.float32, np.uint8)),
-            RandomBrightnessAugmentation(factor=0.3, prob=0.1),
-            GaussianNoise(mean=0.0, std=0.1, prob=0.1),
+            RandBalancedCrop((self._input_shape)),
+            #RandFlip(),
+            #Cast(types=(np.float32, np.uint8)),
+            #RandomBrightnessAugmentation(factor=0.3, prob=0.1),
+            #GaussianNoise(mean=0.0, std=0.1, prob=0.1),
             OneHotLabels(n_classes=3)
         ]
         #print('Before map transforms')
         dataset = dataset.map(
-            map_func=lambda x, y, mean, stdev: apply_transforms(x, y, mean, stdev, transforms=transforms),
+            map_func=lambda x, y: apply_transforms(x, y, transforms=transforms),
             num_parallel_calls=hvd.size())
         #print('After map transforms')
         dataset = dataset.batch(batch_size=self._batch_size,
